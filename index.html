@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日日有籤</title>
+<meta name="description" content="每天一支籤，給今天一點方向。">
+<meta name="theme-color" content="#f5f1e8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="日日有籤">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='10' fill='%23b4432e'/%3E%3Ctext x='32' y='45' font-size='34' text-anchor='middle' fill='%23fbf8f2' font-family='serif'%3E籤%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f1e8; --paper:#fbf8f2; --ink:#2a2622; --sub:#7d7368; --line:#ddd3c3;
+  --red:#b4432e; --red-soft:#e8c9bf; --wood:#e6d2ab; --wood-dark:#9b8259;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Noto Serif TC","Songti TC","PMingLiU","MingLiU",serif;
+  -webkit-tap-highlight-color:transparent; overflow:hidden;
+  -webkit-user-select:none; user-select:none;
+}
+.app{position:relative;max-width:440px;height:100dvh;margin:0 auto}
+.screen{
+  position:absolute; inset:0; overflow-y:auto;
+  padding:calc(env(safe-area-inset-top) + 56px) 24px calc(env(safe-area-inset-bottom) + 32px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+  opacity:0; visibility:hidden; transition:opacity .7s ease, visibility 0s .7s;
+}
+.screen.on{opacity:1; visibility:visible; transition:opacity .7s ease}
+#s-result{justify-content:flex-start}
+
+.mute{
+  position:fixed; top:calc(env(safe-area-inset-top) + 14px); right:max(14px, calc(50% - 206px));
+  width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--paper);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:10; color:var(--ink);
+}
+.mute svg{width:18px;height:18px}
+.mute .off{display:none}
+.mute.muted .on{display:none}
+.mute.muted .off{display:block}
+
+.btn{
+  margin-top:36px; border:1px solid var(--ink); background:transparent; color:var(--ink);
+  font:inherit; font-size:16px; letter-spacing:.35em; padding:14px 30px 14px 38px;
+  border-radius:999px; cursor:pointer; transition:background .25s, color .25s, opacity .5s;
+}
+.btn.dark{background:var(--ink); color:var(--bg)}
+.btn:active{transform:scale(.97)}
+.btn.hide{opacity:0; pointer-events:none}
+
+.small{font-size:13px; color:var(--sub); letter-spacing:.12em; line-height:1.9}
+.lead{font-size:17px; letter-spacing:.18em; line-height:2.1}
+
+/* intro */
+.brand{display:flex; align-items:flex-start; gap:14px}
+.brand h1{writing-mode:vertical-rl; font-size:52px; font-weight:900; letter-spacing:.25em; line-height:1}
+.seal{
+  display:inline-flex; align-items:center; justify-content:center;
+  border:2px solid var(--red); color:var(--red); border-radius:4px;
+  font-weight:900; letter-spacing:.1em;
+}
+.brand .seal{writing-mode:vertical-rl; font-size:14px; padding:8px 4px; margin-top:6px}
+.intro-text{margin-top:48px}
+
+/* calm */
+.breath{
+  width:120px; height:120px; border-radius:50%; border:1px solid var(--red);
+  position:relative; margin-bottom:44px;
+}
+.breath::before{
+  content:""; position:absolute; inset:18px; border-radius:50%; background:var(--red-soft);
+  animation:breath 8s ease-in-out infinite;
+}
+@keyframes breath{0%,100%{transform:scale(.55);opacity:.5}50%{transform:scale(1.15);opacity:1}}
+.calm-lines p{opacity:0; transition:opacity 1.2s}
+.calm-lines p.show{opacity:1}
+
+/* tube */
+.stage{position:relative; width:200px; height:300px; margin-bottom:20px}
+.tube{position:absolute; left:40px; bottom:0; width:120px; height:260px; transform-origin:50% 100%; cursor:grab; touch-action:none}
+.tube.shaking{animation:shake .16s linear infinite}
+@keyframes shake{
+  0%{transform:rotate(-6deg) translateY(0)} 25%{transform:rotate(0) translateY(-6px)}
+  50%{transform:rotate(6deg) translateY(0)} 75%{transform:rotate(0) translateY(-4px)} 100%{transform:rotate(-6deg)}
+}
+.stick{
+  position:absolute; bottom:110px; width:8px; height:120px; border-radius:3px;
+  background:var(--wood); border:1px solid var(--wood-dark); transform-origin:50% 100%;
+}
+.stick::before{content:""; position:absolute; top:4px; left:1px; right:1px; height:16px; background:var(--red); border-radius:2px; opacity:.75}
+.tube-body{
+  position:absolute; left:0; bottom:0; width:120px; height:170px; z-index:2;
+  background:var(--paper); border:1.5px solid var(--ink); border-radius:6px 6px 16px 16px;
+  display:flex; align-items:center; justify-content:center;
+}
+.tube-body::before,.tube-body::after{content:""; position:absolute; left:10px; right:10px; height:1px; background:var(--line)}
+.tube-body::before{top:16px}
+.tube-body::after{bottom:16px}
+.tube-body span{writing-mode:vertical-rl; color:var(--red); font-size:22px; font-weight:900; letter-spacing:.3em}
+.out-stick{
+  position:absolute; left:50%; bottom:140px; width:22px; height:170px; margin-left:-11px; z-index:1;
+  background:var(--wood); border:1px solid var(--wood-dark); border-radius:4px;
+  display:flex; justify-content:center; padding-top:14px; opacity:0; transform:translateY(60px);
+}
+.out-stick span{writing-mode:vertical-rl; color:var(--red); font-size:13px; font-weight:900; letter-spacing:.15em}
+.out-stick.pop{animation:pop 1.1s cubic-bezier(.2,.9,.3,1.2) forwards}
+@keyframes pop{0%{opacity:1;transform:translateY(60px)}100%{opacity:1;transform:translateY(-70px)}}
+.progress{width:160px; height:2px; background:var(--line); border-radius:2px; overflow:hidden; margin:8px auto 18px}
+.progress i{display:block; height:100%; width:0; background:var(--red); transition:width .15s}
+.big-no{font-size:30px; font-weight:900; letter-spacing:.3em; margin-top:6px; opacity:0; transition:opacity .8s}
+.big-no.show{opacity:1}
+
+/* jiao */
+.jiao-area{display:flex; gap:28px; height:220px; align-items:flex-end; margin:10px 0 10px}
+.jiao{width:96px; height:64px}
+.jiao svg{width:100%; height:100%; overflow:visible}
+.jiao.toss{animation:toss1 .95s cubic-bezier(.3,.6,.4,1)}
+.jiao.toss.b{animation-name:toss2}
+@keyframes toss1{
+  0%{transform:translateY(0) rotate(0)} 40%{transform:translateY(-150px) rotate(380deg)}
+  68%{transform:translateY(0) rotate(700deg)} 82%{transform:translateY(-14px) rotate(712deg)} 100%{transform:translateY(0) rotate(720deg)}
+}
+@keyframes toss2{
+  0%{transform:translateY(0) rotate(0)} 42%{transform:translateY(-130px) rotate(-340deg)}
+  70%{transform:translateY(0) rotate(-700deg)} 84%{transform:translateY(-10px) rotate(-714deg)} 100%{transform:translateY(0) rotate(-720deg)}
+}
+.jiao-labels{display:flex; gap:28px}
+.jiao-labels span{width:96px; font-size:12px; color:var(--sub); letter-spacing:.2em}
+.jiao-msg{min-height:64px; margin-top:22px}
+.jiao-msg b{display:block; font-size:22px; letter-spacing:.3em; color:var(--red); margin-bottom:6px}
+
+/* result */
+.card{
+  width:100%; background:var(--paper); border:1px solid var(--line); border-radius:6px;
+  padding:30px 22px 26px; position:relative; text-align:left;
+}
+.card.unfold{animation:unfold 1.3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes unfold{from{clip-path:inset(0 0 100% 0); transform:translateY(10px)} to{clip-path:inset(0 0 0 0); transform:none}}
+.card-head{display:flex; justify-content:space-between; align-items:flex-start}
+.card-head .no{font-size:24px; font-weight:900; letter-spacing:.25em}
+.card-head .gz{font-size:13px; color:var(--sub); letter-spacing:.3em; margin-top:6px}
+.card-head .seal{font-size:18px; width:58px; height:58px; transform:rotate(-6deg); flex-direction:column; line-height:1.15}
+.card-head .seal small{font-size:11px; font-weight:600}
+.poem{
+  writing-mode:vertical-rl; margin:28px auto 8px; font-size:22px; line-height:2.3; letter-spacing:.32em;
+  height:12.5em; display:block; text-align:left;
+}
+.poem-wrap{display:flex; justify-content:center; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:8px 0}
+.tagline{text-align:center; color:var(--red); letter-spacing:.3em; font-size:14px; margin:18px 0 6px}
+.sec{margin-top:22px}
+.sec h3{font-size:13px; color:var(--sub); letter-spacing:.35em; font-weight:600; margin-bottom:8px}
+.sec p{font-size:16px; line-height:1.95; letter-spacing:.05em}
+.grid{display:grid; gap:0; border-top:1px solid var(--line)}
+.grid div{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--line); font-size:15px; line-height:1.75}
+.grid dt{flex:0 0 auto; color:var(--red); font-weight:600; letter-spacing:.2em}
+.foot{margin-top:28px; text-align:center}
+.foot .count{font-size:22px; letter-spacing:.15em; margin:6px 0 4px; font-variant-numeric:tabular-nums}
+.disclaimer{margin-top:22px; font-size:11px; color:var(--sub); letter-spacing:.1em; text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <button class="mute" id="mute" aria-label="切換聲音">
+    <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+    <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
+  </button>
+
+  <!-- 1. 開場 -->
+  <section class="screen" id="s-intro">
+    <div class="brand"><h1>日日有籤</h1><span class="seal">一日一籤</span></div>
+    <div class="intro-text">
+      <p class="lead">每天一支籤<br>給今天一點方向</p>
+      <p class="small" style="margin-top:14px">一天只能抽一次，請誠心以對</p>
+    </div>
+    <button class="btn dark" id="btnStart">開始求籤</button>
+  </section>
+
+  <!-- 2. 默念 -->
+  <section class="screen" id="s-calm">
+    <div class="breath"></div>
+    <div class="calm-lines">
+      <p class="lead">閉上眼睛，深呼吸</p>
+      <p class="lead">在心裡默念你想問的事</p>
+      <p class="small" style="margin-top:10px">工作、感情、考試……什麼都可以</p>
+    </div>
+    <button class="btn hide" id="btnReady">我想好了</button>
+  </section>
+
+  <!-- 3. 搖籤筒 -->
+  <section class="screen" id="s-shake">
+    <div class="stage">
+      <div class="out-stick" id="outStick"><span id="stickText"></span></div>
+      <div class="tube" id="tube">
+        <div id="sticks"></div>
+        <div class="tube-body"><span>六十甲子</span></div>
+      </div>
+    </div>
+    <div class="progress"><i id="prog"></i></div>
+    <p class="small" id="shakeHint">按住籤筒搖一搖<br>手機也可以直接拿起來搖</p>
+    <p class="big-no" id="bigNo"></p>
+    <button class="btn dark hide" id="btnToJiao">擲筊請示</button>
+  </section>
+
+  <!-- 4. 擲筊 -->
+  <section class="screen" id="s-jiao">
+    <p class="small" id="jiaoNo"></p>
+    <p class="lead" style="margin-top:6px">請示神明：是這支籤嗎？</p>
+    <div class="jiao-area">
+      <div class="jiao" id="j1"></div>
+      <div class="jiao b" id="j2"></div>
+    </div>
+    <div class="jiao-labels"><span id="l1"></span><span id="l2"></span></div>
+    <div class="jiao-msg" id="jiaoMsg"><p class="small">一平一凸為「聖筊」，代表神明應允</p></div>
+    <button class="btn dark" id="btnThrow">擲筊</button>
+  </section>
+
+  <!-- 5. 籤詩 -->
+  <section class="screen" id="s-result">
+    <article class="card" id="card">
+      <div class="card-head">
+        <div><div class="no" id="rNo"></div><div class="gz" id="rGz"></div></div>
+        <div class="seal" id="rSeal"></div>
+      </div>
+      <p class="tagline" id="rTag"></p>
+      <div class="poem-wrap"><div class="poem" id="rPoem"></div></div>
+      <div class="sec"><h3>白話解說</h3><p id="rExp"></p></div>
+      <div class="sec"><h3>分項運勢</h3><dl class="grid" id="rGrid"></dl></div>
+    </article>
+    <div class="foot">
+      <p class="small">今天的籤已經抽好了<br>距離明天的新籤還有</p>
+      <p class="count" id="count">--:--:--</p>
+    </div>
+    <p class="disclaimer">籤詩僅供參考，人生的舵還是握在你手上</p>
+  </section>
+</div>
+
+<script>
+/* ===== 六十甲子籤資料 =====
+   [干支, 等級(0上上 1上吉 2中吉 3中平 4下), 詩, 解說, 事業, 感情, 財運, 健康, 考試] */
+const Q = [
+["甲子",0,"日出便見風雲散，光明清淨照世間，一向前途通大道，萬事清吉保平安","太陽一出來，烏雲自己就散了。前方是一條大路，該煩惱的不用再煩惱，放心往前走就對了。","時機正好，想推動的事可以開始了。","把話說開，關係就會明朗。","穩穩進帳，順順的。","精神不錯，記得多曬點太陽。","正常發揮就能過關。"],
+["甲寅",1,"於今此景正當時，看看欲吐百花魁，若能遇得春色到，一洒清吉脫塵埃","你現在像一朵快要開的花，只差一陣春風。再多一點耐心，好事就會把你從灰撲撲的日子裡帶出來。","準備了很久的事，機會快到了。","春風將至，桃花有望。","漸入佳境，別急著出手。","多出門走走，讓身體也開個花。","花苞已飽滿，考前別自己嚇自己。"],
+["甲辰",1,"勸君把定心莫虛，天註衣祿自有餘，和合重重常吉慶，時來終遇得明珠","把心定下來，不必心虛。該是你的，老天都幫你留著，時候到了，明珠自然落到手上。","守住本心，穩定就是優勢。","和和氣氣，甜蜜加倍。","不愁吃穿，偶有小驚喜。","心安了，睡眠也會變好。","專心準備，會有好成績。"],
+["甲午",1,"風恬浪靜可行舟，恰是中秋月一輪，凡事不須多憂慮，福祿自有慶家門","風平浪靜，正適合開船。像中秋的月亮一樣圓滿，那些擔心多半是想太多了。","順風順水，可以出航。","團圓美滿，適合一起吃頓好的。","家運興旺，小有積蓄。","不必過度擔心，保持規律就好。","放輕鬆，發揮會更好。"],
+["甲申",3,"只恐前途命有變，勸君作急可宜先，且守長江無大事，命逢太白守身邊","前面可能會有變數，所以想做的事要趁早做，別拖。守好本分就不會出大事，而且有貴人在身邊罩著你。","計畫提早做，拖延是今天的敵人。","有話早點說，別等對方猜。","保守為上，不衝動消費。","小毛病早點處理，別硬撐。","提早準備，別臨時抱佛腳。"],
+["甲戌",4,"風雲致雨落洋洋，天災時氣必有傷，命內此事難和合，更逢一足出外鄉","今天的天氣不太幫忙，有些事就是湊不起來。先找個地方躲雨，不要硬闖。雨總會停的。","暫緩重大決定，先觀望。","容易有距離感，多一點體諒。","守住荷包，避免借貸。","注意天氣變化，別著涼。","把基礎補好，比衝刺更重要。"],
+["乙丑",1,"雲開月出正分明，不須進退問前程，婚姻皆由天註定，和合清吉萬事成","雲散了，月亮露臉，一切都很清楚。不用一直猶豫要進還是退，緣分自有安排，事情會圓滿。","方向清楚，照著走就好。","緣分到了，好事近了。","平順安穩。","身心安泰。","心不亂，就會順利。"],
+["乙卯",1,"禾稻看看結成完，此事必定兩相全，回到家中寬心坐，妻兒鼓舞樂團圓","稻子就快收成了，兩全其美。努力的成果準備兌現，可以回家好好坐下，笑著享受。","耕耘有收成。","家庭和樂，適合陪陪家人。","豐收，但別一次花光。","好好休息，就是最好的補品。","努力有回報。"],
+["乙巳",3,"龍虎相隨在深山，君爾何須背後看，不知此去相愛愉，他日與我卻無干","有些人事走到一個段落了。與其頻頻回頭，不如往前看。放下，不是失去，是騰出空間。","合作要看清楚，別過度依賴他人。","不強求，該來的會來。","借錢給人要三思。","放下心事，睡得更好。","靠自己最實在。"],
+["乙未",4,"花開結子一半枯，可惜今年汝虛度，漸漸日落西山去，勸君不用向前途","這陣子比較像充電期，不是衝刺期。休息不是浪費時間，是為了下一次走得更遠。","不宜冒進，先蹲低再跳。","別急著要結果。","少花錢，少投資。","該睡就睡，別再熬夜了。","調整讀書方法，比硬讀重要。"],
+["乙酉",2,"靈雞漸漸見分明，凡事且看子丑寅，雲開月出照天下，郎君即便見太平","雞啼了，天快亮了。最黑的時候已經過去，再撐一下，就能看見光。","曙光出現，再堅持一下。","誤會會慢慢解開。","漸有起色。","逐漸好轉，早睡早起有幫助。","越讀越通。"],
+["乙亥",1,"長江風浪漸漸靜，于今得進可安寧，必有貴人相扶助，凶事脫出見太平","大浪慢慢平息，可以繼續前進了。會有人伸手拉你一把，難關過了就是晴天。","有貴人相助，記得道謝。","風波平息，和好如初。","回穩中。","漸漸康復。","有人指點，進步神速。"],
+["丙子",4,"命中正逢羅孛關，用盡心機總未休，作福問神難得過，恰是行舟上高灘","現在像是逆流划船，很累。不是你不夠好，是水流太急。換個時機或換個方法，會輕鬆很多。","先別硬拚，保存體力。","少一點算計，多一點真心。","不宜投機。","別過勞，身體會記帳。","換個讀書方法試試。"],
+["丙寅",1,"財中漸漸見分明，花開花謝結子成，寬心且看月中桂，郎君即便見太平","花開了又謝，但結了果。財路慢慢清楚，放寬心，好事一件件來。","成果漸漸浮現。","開花結果。","財路漸明。","平安。","有望折桂。"],
+["丙辰",3,"八十原來是太公，看看晚景遇文王，目下緊事休相問，勸君且守待運通","姜太公八十歲才遇到文王，大器晚成。眼前的急事先別逼自己，你的時機還在路上。","大器晚成，耐心等。","慢慢來，比較快。","先別急著求財。","慢慢調養。","長期累積才會開花。"],
+["丙午",4,"不須作福不須求，用盡心機總未休，陽世不知陰世事，官法如爐不自由","有些事強求不來，用盡心機也沒用。與其鑽漏洞，不如老老實實照規矩走，反而最安全。","注意合約與法規細節。","別耍心機，真誠最好。","不碰灰色地帶。","照醫囑最實在。","別想走捷徑。"],
+["丙申",2,"舊恨重重未改為，家中禍患不臨身，須當謹防宜作福，龍蛇交會得和合","有些舊問題還沒處理，但不會釀成大禍。小心一點、多做好事，時機一到就能化解。","把舊帳整理清楚就順了。","化解舊心結。","謹慎就能保平安。","舊傷舊病要照顧。","把舊錯題再看一遍。"],
+["丙戌",1,"君問中間此言因，看看祿馬拱前程，若得貴人多得利，和合自有兩分明","好運正在前面排隊。如果遇到貴人，收穫會更多，事情也會很清楚明白。","升遷加薪有望。","可能有人想幫你牽線。","貴人帶財。","平安。","有望上榜。"],
+["丁丑",3,"富貴由命天註定，心高必然誤君期，不然且回依舊路，雲開月出自分明","目標太高，反而會錯過時機。回到熟悉的路上，踏實走，雲自然會散開。","目標別訂太高，回到擅長的事。","老朋友或舊緣值得珍惜。","知足常樂。","回到規律作息。","回頭複習基礎。"],
+["丁卯",4,"前途功名未得意，只恐命內有交加，兩家必定防損失，勸君且退莫咨嗟","現在不是往前衝的好時候，容易兩頭落空。先退一步，不必嘆氣，退一步是為了下次跳更遠。","先守不攻。","注意外在因素干擾。","防損失，別幫人作保。","小心碰撞跌倒。","這次不理想也別灰心。"],
+["丁巳",1,"十方佛法有靈通，大難禍患不相同，紅日當空常照耀，還有貴人到家堂","大難都能化小，太陽高高掛著，還會有貴人親自上門。安心吧。","難關已過。","有好消息上門。","轉好。","康復有望。","順利。"],
+["丁未",1,"太公家業八十成，月出光輝四海明，命內自然逢大吉，茅屋中間百事亨","不管起點多小，都能成就一番事業。就算住在小茅屋，也能事事順心。","從小處做起，也能成大事。","平凡就是幸福。","小屋也能聚財。","身體不錯。","吉。"],
+["丁酉",3,"欲去長江水闊茫，前途未遂運未通，如今絲綸常在手，只恐魚水不相逢","釣竿已經在手上了，只是魚還沒來。準備沒有白費，只是要再等一下時機。","準備好了，等時機。","有心，但緣分還在路上。","機會還沒咬鉤。","普通，多喝水。","實力有了，等運氣。"],
+["丁亥",1,"月出光輝四海明，前途祿位見太平，浮雲掃退終無事，可保禍患不臨身","月光照亮四方，雲被掃開了。前途平順，不用擔心有什麼禍事。","前途光明。","雨過天晴。","穩定。","平安無事。","吉。"],
+["戊子",3,"總是前途莫心勞，求神問聖枉是多，但看雞犬日過後，不須作福事如何","不用太操心，一直問也沒用（對，包括一直抽籤）。過幾天，事情自然會有答案。","別問太多人意見，時間到就好。","別想太多。","平穩。","放鬆最重要。","別焦慮，照計畫走。"],
+["戊寅",0,"選出牡丹第一枝，勸君折取莫遲疑，世間若問相知處，萬事逢春正及時","最美的那朵牡丹就在你面前，喜歡就伸手，別再猶豫！萬事逢春，現在正是時候。","機會來了，快抓住。","喜歡就說出口！","好機會，果斷一點。","活力滿滿。","名列前茅。"],
+["戊辰",1,"君爾寬心且自由，門庭清吉家無憂，財寶自然終吉利，凡事無傷不用求","放寬心，自在過日子就好。家裡平安，錢財也會自己找上門，不必強求。","輕鬆做，反而做得好。","家庭和睦。","自然有財。","身心自在。","放輕鬆就好。"],
+["戊午",4,"於今莫作此當時，虎落平陽被犬欺，世間凡事何難定，千山萬水也遲疑","老虎暫時離開了山林，被小事欺負也別放在心上。等回到自己的地盤，你還是那隻老虎。","暫時低調，避免衝突。","少吵架，多忍一下。","小心被佔便宜。","照顧好自己的情緒。","環境不利時更要穩住。"],
+["戊申",3,"枯木可惜未逢春，如今反在暗中藏，寬心且守風霜退，還君依舊作乾坤","現在像冬天的樹，看起來光禿禿，其實在默默長根。等風霜退去，又是一片新氣象。","冬藏期，蓄積實力。","默默經營，終會被看見。","先存起來。","保暖休養。","默默累積，春天會到。"],
+["戊戌",3,"漸漸看此月中和，過後須防未得高，改變顏色前途去，凡事必定見重勞","接下來會比較辛苦一點，但只要願意改變做法，還是有路可走。辛苦是真的，收穫也會是真的。","會比較辛苦，但有轉機。","需要用心經營。","賺的是辛苦錢。","別太累。","要花更多力氣，但值得。"],
+["己丑",1,"綠柳蒼蒼正當時，任君此去作乾坤，花果結實無殘謝，福祿自有慶家門","柳樹正綠，正是你大展身手的時候。開花結果，不會落空。","放手去做。","感情穩定成長。","福祿雙全。","生氣勃勃。","大展身手。"],
+["己卯",4,"龍虎相交在門前，此事必定兩相連，黃金忽然變成鐵，何用作福問神仙","看起來是黃金，小心最後變成鐵。別被表面迷惑，守住已有的，比追求更多更重要。","別貪心，守住已有的。","糾結的關係要理清。","投資謹慎，小心縮水。","注意身體小警訊。","別粗心丟分。"],
+["己巳",2,"欲去長江水闊茫，行舟把定未遭風，戶內用心再作福，看看魚水得相逢","江面很寬，但只要握穩船舵，就不會遇到大風。用心經營，想要的終會相遇。","穩穩把舵，終達彼岸。","用心經營，終會相逢。","慢慢累積。","平安。","穩定發揮。"],
+["己未",2,"危險高山行過盡，莫嫌此路有重重，若見蘭桂漸漸發，長蛇反轉變成龍","最險的山已經爬過了，別嫌路長。苦盡甘來，小蛇也會變成龍。","先苦後甘。","越來越好。","漸入佳境。","漸漸恢復。","苦讀有成。"],
+["己酉",2,"此事何須用心機，前途變怪自然知，看看此去得和合，漸漸脫出見太平","不用費盡心思算計，事情會自己慢慢變好。順其自然，就能走出困境。","順勢而為。","自然和好。","平穩。","漸漸好轉。","別鑽牛角尖。"],
+["己亥",1,"福如東海壽如山，君爾何須嘆苦難，命內自然逢大吉，祈保分明自平安","福氣像東海一樣多，別再嘆氣了！你的好運多到可以分給別人。","大吉。","幸福美滿。","福氣滿滿。","長壽健康。","吉。"],
+["庚子",1,"運逢得意身顯變，君爾身中皆有益，一向前途無難事，決意之中保清吉","運氣來了，整個人都會不一樣。下定決心去做，前面沒什麼難得倒你。","下定決心就成。","主動一點，好事發生。","有利。","精神好。","決心就是答案。"],
+["庚寅",2,"名顯有意在中央，不須祈禱心自安，看看早晚日過後，即時得意在其間","好名聲就在眼前，不用一直求，心安就好。過幾天，就是你得意的時候。","即將被看見。","心安，感情就安。","近日有小收穫。","心安體健。","近日有好消息。"],
+["庚辰",3,"意中若問神仙路，勸爾且退望高樓，寬心且守寬心坐，必然遇得貴人扶","先退一步，站高一點看。寬心等待，一定會有人來幫忙。","退一步，看清全局。","給彼此一點空間。","守住現有的。","放寬心。","找人請教會有突破。"],
+["庚午",1,"平生富貴成祿位，君家門戶定光輝，此中必定無損失，夫妻百歲喜相隨","富貴有成，家門光彩，而且不會有損失。感情方面更是百年好合。","事業有成。","百年好合。","不會有損失。","平安。","吉。"],
+["庚申",2,"今行到此實難推，歌歌暢飲自徘徊，雞犬相聞消息近，婚姻夙世結成雙","走到這裡好像有點卡，但好消息就在附近了。先放鬆喝杯茶，答案很快就來。","有點卡，但轉機近了。","前世修來的緣分。","小有進展。","放鬆一下。","消息近了。"],
+["庚戌",4,"一重江水一重山，誰知此去路又難，任他改求終不過，是非終久未得安","翻過一座山又是一條河，這段路確實不好走。先不要勉強，避開是非，保護好自己。","避開是非，不宜變動。","少聽閒言閒語。","謹慎理財。","照顧好身體。","多做準備，穩紮穩打。"],
+["辛丑",2,"一年作事急如飛，君爾寬心莫遲疑，貴人還在千里外，音信月中漸漸知","日子過得飛快，但不用慌。貴人雖然還在遠方，這個月內就會有消息。","貴人在遠方，消息將至。","遠方有好消息。","慢慢會有進帳。","放寬心。","月中見分曉。"],
+["辛卯",2,"客到前途多得利，君爾何故兩相疑，雖是中間逢進退，月出光輝得運時","前途有利，別再懷疑了。中間難免進進退退，但月亮出來的時候，就是你的時機。","外出或合作有利。","別互相猜疑。","有利可圖。","平安。","會有起伏，但終有好結果。"],
+["辛巳",1,"花開今已結成果，富貴榮華終到老，君子小人相會合，萬事清吉莫煩惱","花已經結果，富貴一路到老。各種人都能和平相處，萬事順遂，別再煩惱了。","成果豐碩。","白頭偕老。","富貴。","健康長壽。","吉。"],
+["辛未",1,"功名得意與君顯，前途富貴喜安然，若遇一輪明月照，十五團圓光滿天","功名得意，前途富貴。就像十五的月亮，又圓又亮。","功成名就。","花好月圓。","富貴安然。","平安。","金榜題名。"],
+["辛酉",2,"君爾何須問聖跡，自己心中皆有益，於今且看月中旬，凶事脫出化成吉","答案其實就在你心裡，不必問神。到了月中，壞事也會轉好。","相信自己的判斷。","聽聽自己的心。","中旬後轉好。","漸漸好轉。","相信自己。"],
+["辛亥",4,"陽世作事未和同，雲遮月色正朦朧，心中意欲前途去，只恐命內運未通","雲遮住了月亮，現在看不太清楚。想往前走的心情可以理解，但再等等，等雲散開。","時機未到，不宜躁進。","彼此意見不同，多溝通。","暫緩投資。","注意作息。","再多準備一點。"],
+["壬子",3,"言語雖多不可從，風雲靜處未行龍，暗中終得明消息，君爾何須問重重","別人說的話很多，不必每句都聽。靜靜等著，答案會自己浮現。","別被流言影響。","別聽信傳言。","別聽人報明牌。","少聽偏方。","別被別人的進度影響。"],
+["壬寅",2,"佛前發誓無異心，且看前途得好音，此物原來本是鐵，也能變化得成金","只要真心不變，鐵也能變成金。有好消息正在路上。","誠心努力，點鐵成金。","真心不變，終有好音。","可望增值。","穩定。","努力會被看見。"],
+["壬辰",3,"東西南北不堪行，前途此事正可當，勸君把定莫煩惱，家門自有保安康","現在到處跑不太適合，待在原地反而好。把心定下來，家裡平安就是福。","不宜遠行或變動。","陪伴就是最好的禮物。","守成為上。","在家休養。","在熟悉的環境讀書最好。"],
+["壬午",2,"功名事業本由天，不須掛念意懸懸，若問中間遲與速，風雲際會在眼前","事業的事不用一直懸在心上，機會其實就在眼前了。","機會就在眼前。","緣分不遠。","近期有機會。","放下焦慮。","放輕鬆，一鼓作氣。"],
+["壬申",1,"看君來問心中事，積善之家慶有餘，運亨財子雙雙至，指日喜氣溢門閭","平常累積的善念，現在要開始回報了。財運、家運雙喜臨門，喜氣洋洋。","好運亨通。","喜事臨門。","財源廣進。","健康。","有喜。"],
+["壬戌",2,"孤燈寂寂夜沉沉，萬事清吉萬事成，若逢陰中有善果，燒得好香達神明","夜深人靜，一盞孤燈，看起來寂寞，其實萬事都在默默成形。多做善事，好運自來。","默默耕耘，自有成果。","安靜陪伴也很好。","穩定。","早點睡。","深夜苦讀有回報（但別太晚）。"],
+["癸丑",4,"須知進退總言虛，看看發暗未必全，珠玉深藏還未變，心中但得枉徒然","現在的消息虛虛實實，別太當真。你的寶藏還藏著，只是還沒到發光的時候。","不輕信承諾。","別急著下結論。","不宜冒險。","多留意身體訊號。","實力還沒完全發揮。"],
+["癸卯",3,"病中若得苦心勞，到底完全總未遭，去後不須回頭問，心中事務盡消磨","最近可能有點累、有點苦，但最後不會出大事。別一直回頭想，煩惱會慢慢消散。","辛苦但會過去。","別翻舊帳。","小心開銷。","好好休息，別硬撐。","往前看，別懊悔。"],
+["癸巳",2,"勸君把定心莫虛，前途清吉得運時，到底中間無大事，又遇神仙守安居","心穩住，好運就到。中間不會有什麼大事，還有神明守著你。","穩定順利。","平安喜樂。","有運。","平安。","穩穩的。"],
+["癸未",4,"蛇身意欲變成龍，只恐命內運未通，久病且作寬心坐，言語雖多不可從","想要一步登天，但時候還沒到。先寬心坐下來，也別隨便聽別人的建議。","別急著升級，先練好基本功。","別聽太多意見。","別聽信投資建議。","慢慢調養，寬心最重要。","踏實準備，別求速成。"],
+["癸酉",1,"有心作福莫遲疑，求名清吉正當時，此事必能成會合，財寶自然喜相隨","想做的好事別猶豫，現在正是時候！一定能成，錢財也會跟著來。","放手去做。","可以主動出擊。","財寶相隨。","健康。","正當時，衝！"],
+["癸亥",3,"月出光輝本清吉，浮雲總是蔽陰色，戶內用心再作福，當官分理便有益","本來好好的，偶爾有浮雲遮住而已。把自己的事做好，講道理，事情就會順。","按規矩來，就能化解。","把家裡顧好。","穩健理財。","注意小毛病。","按部就班。"]
+];
+const LV = [["上上","好運滿格"],["上吉","順風順水"],["中吉","漸入佳境"],["中平","穩穩就好"],["下籤","先蹲後跳"]];
+const CAT = ["事業","感情","財運","健康","考試"];
+
+/* ===== 工具 ===== */
+const $ = id => document.getElementById(id);
+const DIG = "零一二三四五六七八九";
+function cn(n){
+  if(n<=10) return n===10?"十":DIG[n];
+  const t=Math.floor(n/10), o=n%10;
+  return (t===1?"":DIG[t])+"十"+(o?DIG[o]:"");
+}
+function rand(n){ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]%n; }
+function today(){ const d=new Date(); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+const KEY="rryq-v1";
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ return null; } }
+function save(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+function go(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); }
+
+/* ===== 聲音（Web Audio 即時合成） ===== */
+let ac=null, noiseBuf=null, muted=false;
+try{ muted = localStorage.getItem("rryq-mute")==="1"; }catch(e){}
+function audio(){
+  if(!ac){
+    const C = window.AudioContext||window.webkitAudioContext; if(!C) return null;
+    ac = new C();
+    noiseBuf = ac.createBuffer(1, ac.sampleRate*0.5, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }
+  if(ac.state==="suspended") ac.resume();
+  return ac;
+}
+function env(g,t,peak,dur){ g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); }
+function clack(freq, vol=0.22, delay=0){
+  if(muted) return; const a=audio(); if(!a) return; const t=a.currentTime+delay;
+  const o=a.createOscillator(), g=a.createGain(); o.type="triangle"; o.frequency.value=freq;
+  env(g,t,vol,0.07); o.connect(g).connect(a.destination); o.start(t); o.stop(t+0.1);
+  const n=a.createBufferSource(), f=a.createBiquadFilter(), g2=a.createGain();
+  n.buffer=noiseBuf; f.type="bandpass"; f.frequency.value=freq*1.6; f.Q.value=3;
+  env(g2,t,vol*0.8,0.04); n.connect(f).connect(g2).connect(a.destination); n.start(t); n.stop(t+0.06);
+}
+function thud(delay=0, vol=0.5){
+  if(muted) return; const a=audio(); if(!a) return; const t=a.currentTime+delay;
+  const o=a.createOscillator(), g=a.createGain(); o.type="sine";
+  o.frequency.setValueAtTime(210,t); o.frequency.exponentialRampToValueAtTime(90,t+0.15);
+  env(g,t,vol,0.22); o.connect(g).connect(a.destination); o.start(t); o.stop(t+0.25);
+  clack(650, vol*0.5, delay);
+}
+function bell(){
+  if(muted) return; const a=audio(); if(!a) return; const t=a.currentTime+0.05;
+  const base=262, parts=[[1,.35,4.5],[2.01,.18,3.2],[2.76,.12,2.4],[4.1,.06,1.6],[5.4,.04,1.1]];
+  parts.forEach(([r,v,d])=>{
+    const o=a.createOscillator(), g=a.createGain(); o.type="sine"; o.frequency.value=base*r;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t+d+0.1);
+  });
+}
+const muteBtn=$("mute");
+muteBtn.classList.toggle("muted", muted);
+muteBtn.onclick=()=>{ muted=!muted; muteBtn.classList.toggle("muted",muted); try{localStorage.setItem("rryq-mute",muted?"1":"0");}catch(e){} if(!muted){audio(); clack(1400);} };
+
+/* ===== 狀態 ===== */
+let state = load();
+if(location.search.includes("reset")){ try{localStorage.removeItem(KEY);}catch(e){} state=null; history.replaceState(null,"",location.pathname); }
+if(state && state.date!==today()) state=null;
+
+/* ===== 1 → 2 ===== */
+$("btnStart").onclick=async()=>{
+  audio();
+  try{ if(window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission==="function") await DeviceMotionEvent.requestPermission(); }catch(e){}
+  go("s-calm");
+  const ps=document.querySelectorAll(".calm-lines p");
+  ps.forEach(p=>p.classList.remove("show")); $("btnReady").classList.add("hide");
+  setTimeout(()=>ps[0].classList.add("show"),500);
+  setTimeout(()=>{ps[1].classList.add("show"); ps[2].classList.add("show");},2300);
+  setTimeout(()=>$("btnReady").classList.remove("hide"),4200);
+};
+$("btnReady").onclick=()=>{ clack(900); go("s-shake"); };
+
+/* ===== 3. 搖籤筒 ===== */
+(function buildSticks(){
+  const box=$("sticks"); let h="";
+  for(let i=0;i<11;i++){
+    const left=14+i*8.6, rot=(i-5)*2.2+(Math.random()*3-1.5), up=Math.random()*18;
+    h+=`<span class="stick" style="left:${left}px;transform:translateY(${-up}px) rotate(${rot}deg)"></span>`;
+  }
+  box.innerHTML=h;
+})();
+let progress=0, shaking=false, shakeTimer=null, popped=false;
+const tube=$("tube");
+function addProgress(v){
+  if(popped) return;
+  progress=Math.min(100,progress+v); $("prog").style.width=progress+"%";
+  clack(1100+Math.random()*900, 0.16); if(Math.random()<.6) clack(1300+Math.random()*900, 0.12, 0.03+Math.random()*0.04);
+  if(progress>=100) popStick();
+}
+function startShake(e){ if(popped) return; e&&e.preventDefault(); shaking=true; tube.classList.add("shaking"); addProgress(3); clearInterval(shakeTimer); shakeTimer=setInterval(()=>addProgress(4),110); }
+function stopShake(){ shaking=false; clearInterval(shakeTimer); if(!motionShaking) tube.classList.remove("shaking"); }
+tube.addEventListener("pointerdown",startShake);
+window.addEventListener("pointerup",stopShake);
+window.addEventListener("pointercancel",stopShake);
+
+let last=null, motionShaking=false, motionOff=null;
+window.addEventListener("devicemotion",e=>{
+  if(!$("s-shake").classList.contains("on")||popped) return;
+  const a=e.accelerationIncludingGravity; if(!a||a.x==null) return;
+  if(last){
+    const d=Math.abs(a.x-last.x)+Math.abs(a.y-last.y)+Math.abs(a.z-last.z);
+    if(d>14){
+      addProgress(5); motionShaking=true; tube.classList.add("shaking");
+      clearTimeout(motionOff); motionOff=setTimeout(()=>{motionShaking=false; if(!shaking) tube.classList.remove("shaking");},250);
+    }
+  }
+  last={x:a.x,y:a.y,z:a.z};
+});
+
+function popStick(){
+  popped=true; stopShake(); tube.classList.remove("shaking");
+  const n=rand(60)+1;
+  state={date:today(), n, ok:false}; save(state);
+  showStick(n, true);
+}
+function showStick(n, animate){
+  popped=true; progress=100; $("prog").style.width="100%";
+  $("stickText").textContent="第"+cn(n)+"籤";
+  const s=$("outStick"); s.classList.remove("pop"); void s.offsetWidth; s.classList.add("pop");
+  if(animate){ clack(700,.3); clack(500,.25,.12); }
+  $("shakeHint").textContent="籤落了";
+  $("bigNo").textContent="第 "+cn(n)+" 籤"; setTimeout(()=>$("bigNo").classList.add("show"),500);
+  setTimeout(()=>$("btnToJiao").classList.remove("hide"),1100);
+}
+$("btnToJiao").onclick=()=>{ clack(900); $("jiaoNo").textContent="第 "+cn(state.n)+" 籤"; go("s-jiao"); };
+
+/* ===== 4. 擲筊 ===== */
+// flat=true 平面朝上（陽），false 凸面朝上（陰）
+function jiaoSVG(flat){
+  const path="M4,46 C18,6 82,6 96,46 C80,34 20,34 4,46 Z";
+  return flat
+    ? `<svg viewBox="0 0 100 52"><path d="${path}" fill="#c75a43" stroke="#2a2622" stroke-width="1.5"/><path d="M22,38 C38,32 62,32 78,38" stroke="#fbf8f2" stroke-opacity=".5" stroke-width="1.2" fill="none"/></svg>`
+    : `<svg viewBox="0 0 100 52"><defs><radialGradient id="g${Math.random().toString(36).slice(2,7)}" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#d97a62"/><stop offset="1" stop-color="#8f2f1f"/></radialGradient></defs><path d="${path}" fill="#9f3826" stroke="#2a2622" stroke-width="1.5"/><path d="M26,22 C40,12 60,12 74,22" stroke="#fbf8f2" stroke-opacity=".55" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>`;
+}
+function setJiao(a,b){
+  $("j1").innerHTML=jiaoSVG(a); $("j2").innerHTML=jiaoSVG(b);
+  $("l1").textContent=a?"平面":"凸面"; $("l2").textContent=b?"平面":"凸面";
+}
+setJiao(true,false);
+let throwing=false;
+$("btnThrow").onclick=()=>{
+  if(throwing) return; throwing=true; audio();
+  $("btnThrow").classList.add("hide"); $("jiaoMsg").innerHTML="";
+  $("l1").textContent=""; $("l2").textContent="";
+  const r=rand(4); // 0,1 聖筊；2 笑筊；3 陰筊
+  const res = r<2 ? (r===0?[true,false]:[false,true]) : r===2?[true,true]:[false,false];
+  [$("j1"),$("j2")].forEach(j=>{ j.classList.remove("toss"); void j.offsetWidth; j.classList.add("toss"); });
+  setTimeout(()=>setJiao(res[0],res[1]),640);
+  thud(.64,.5); thud(.68,.45); thud(.8,.18); thud(.83,.15);
+  setTimeout(()=>{
+    const msg=$("jiaoMsg");
+    if(res[0]!==res[1]){
+      msg.innerHTML="<b>聖筊</b><p class='small'>神明點頭了，就是這支籤</p>";
+      state.ok=true; save(state);
+      setTimeout(()=>showResult(state.n,true),1600);
+    }else if(res[0]){
+      msg.innerHTML="<b>笑筊</b><p class='small'>神明笑而不語，靜下心再擲一次吧</p>";
+      $("btnThrow").textContent="再擲一次"; $("btnThrow").classList.remove("hide"); throwing=false;
+    }else{
+      msg.innerHTML="<b>陰筊</b><p class='small'>神明還在想，深呼吸，再請示一次</p>";
+      $("btnThrow").textContent="再擲一次"; $("btnThrow").classList.remove("hide"); throwing=false;
+    }
+  },1050);
+};
+
+/* ===== 5. 籤詩 ===== */
+function showResult(n, fresh){
+  const q=Q[n-1], lv=LV[q[1]];
+  $("rNo").textContent="第"+cn(n)+"籤";
+  $("rGz").textContent=q[0]+"籤";
+  $("rSeal").innerHTML=lv[0].slice(0,1)+"<br>"+lv[0].slice(1);
+  $("rTag").textContent="— "+lv[1]+" —";
+  $("rPoem").innerHTML=q[2].split("，").join("<br>");
+  $("rExp").textContent=q[3];
+  $("rGrid").innerHTML=CAT.map((c,i)=>`<div><dt>${c}</dt><dd>${q[4+i]}</dd></div>`).join("");
+  const card=$("card"); card.classList.remove("unfold");
+  go("s-result"); $("s-result").scrollTop=0;
+  if(fresh){ void card.offsetWidth; card.classList.add("unfold"); bell(); }
+  tick();
+}
+function tick(){
+  const now=new Date(), next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+  let s=Math.max(0,Math.floor((next-now)/1000));
+  if(s===0 || today()!==state.date){ location.reload(); return; }
+  const h=String(Math.floor(s/3600)).padStart(2,"0"), m=String(Math.floor(s%3600/60)).padStart(2,"0"), ss=String(s%60).padStart(2,"0");
+  $("count").textContent=`${h}:${m}:${ss}`;
+}
+setInterval(()=>{ if($("s-result").classList.contains("on")) tick(); },1000);
+
+/* ===== 啟動 ===== */
+if(state && state.ok){ showResult(state.n,false); }
+else if(state){ showStick(state.n,false); $("btnToJiao").classList.remove("hide"); $("bigNo").classList.add("show"); go("s-shake"); }
+else go("s-intro");
+</script>
+</body>
+</html>
